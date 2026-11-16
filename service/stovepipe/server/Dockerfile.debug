@@ -11,6 +11,7 @@ WORKDIR /root/
 # Copy pre-built Linux debug binary.
 # Built via: make build-stovepipe-linux-debug
 COPY .docker-bin/stovepipe-debug ./stovepipe
+COPY service/stovepipe/server/queues.yaml ./queues.yaml
 
 EXPOSE 8080 2345
 

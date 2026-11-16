@@ -229,8 +229,8 @@ func (c *Controller) coalesce(ctx context.Context, store storage.Storage, reques
 // admitLatestHead holds the delivery while the build-slot gate is closed; otherwise it marks the
 // request processing, counts its build slot, and publishes it to build.
 func (c *Controller) admitLatestHead(ctx context.Context, store storage.Storage, delivery consumer.Delivery, request entity.Request, queueRow entity.Queue, cfg entity.QueueConfig) error {
-	if queueRow.InFlightCount >= cfg.MaxConcurrent {
-		return c.holdForBuildSlot(ctx, delivery, request, queueRow.InFlightCount, cfg.GateWaitDelayMs)
+	if queueRow.InFlightCount >= cfg.Stages.Process.MaxConcurrent {
+		return c.holdForBuildSlot(ctx, delivery, request, queueRow.InFlightCount, cfg.Stages.Process.GateWaitDelayMs)
 	}
 
 	strategy, baseURI, err := c.deriveBuildStrategy(ctx, queueRow, request)

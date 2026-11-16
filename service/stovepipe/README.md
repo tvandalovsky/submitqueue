@@ -53,6 +53,12 @@ The Stovepipe controllers live under [`stovepipe/controller/`](../../stovepipe/c
 | `PORT`              | no       | gRPC listen address                      | `:8083`              |
 | `HOSTNAME`          | no       | Subscriber name for the queue consumers  | `stovepipe-<unix_ts>` |
 
+## Queue and stage configuration
+
+The example server reads `queues.yaml` from its working directory by default; the normal and debug Docker images include [`server/queues.yaml`](server/queues.yaml). Select another complete file with `-config`. No embedded baseline or cross-file merging is involved.
+
+The file contains shared settings under `defaults.stages` and explicitly named `queues` with optional stage overrides. Queue names must match `MQ_TENANTS`. Invalid configuration fails startup; changes require a restart. See the [configuration provider](../../stovepipe/extension/queueconfig/README.md) for inheritance and validation rules.
+
 ## Running
 
 ### Docker Compose (recommended)
@@ -92,7 +98,7 @@ History lookup is defined by retained `request_log` rows. A request with no reta
 bazel build //service/stovepipe/server:stovepipe
 bazel build //service/stovepipe/client:stovepipe
 
-go run ./service/stovepipe/server
+go run ./service/stovepipe/server -config service/stovepipe/server/queues.yaml
 ```
 
 ## Testing the Ping RPC

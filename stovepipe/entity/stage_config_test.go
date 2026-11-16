@@ -50,3 +50,15 @@ func TestStageConfigValidatesEveryStage(t *testing.T) {
 		})
 	}
 }
+
+func TestQueueConfigValidate(t *testing.T) {
+	cfg := QueueConfig{Name: "known", Stages: testStageConfig()}
+	require.NoError(t, cfg.Validate())
+
+	cfg.Name = ""
+	require.Error(t, cfg.Validate())
+
+	cfg.Name = "known"
+	cfg.Stages.BuildAnalysis = BuildAnalysisConfig{}
+	require.Error(t, cfg.Validate())
+}

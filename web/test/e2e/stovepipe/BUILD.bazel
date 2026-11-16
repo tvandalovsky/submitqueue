@@ -27,9 +27,19 @@ pkg_files(
     renames = {":stovepipe_linux": "stovepipe"},
 )
 
+pkg_files(
+    name = "stovepipe_config",
+    srcs = ["queues.yaml"],
+    attributes = pkg_attributes(mode = "0444"),
+    prefix = "app",
+)
+
 pkg_tar(
     name = "stovepipe_layer",
-    srcs = [":stovepipe_binary"],
+    srcs = [
+        ":stovepipe_binary",
+        ":stovepipe_config",
+    ],
 )
 
 oci_image(

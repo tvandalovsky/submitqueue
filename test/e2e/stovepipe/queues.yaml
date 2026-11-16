@@ -1,0 +1,30 @@
+defaults:
+  stages:
+    process:
+      maxConcurrent: 1
+      gateWaitDelay: 5s
+    buildSignal:
+      acceptedPollDelay: 5s
+      runningPollDelay: 2s
+    buildAnalysis:
+      pollDelay: 2m
+    issueTrack:
+      refreshDelay: 30s
+      recoveryWaitDelay: 30s
+queues:
+  - name: monorepo/main
+  - name: monorepo/release
+  - name: monorepo/slow?buildrunner-fake=build-slow
+  - name: e2e-stovepipe/list-pagination
+  - name: e2e-stovepipe/list-time-bounds
+  - name: e2e-stovepipe/list-primary
+  - name: e2e-stovepipe/list-other
+  - name: e2e-stovepipe/list-validation
+  - name: e2e-stovepipe/queue-state
+  - name: e2e-stovepipe/issue-tracking
+  - name: e2e-stovepipe/issue-tracking-dlq
+  - name: e2e-stovepipe/open-issues
+  - name: e2e-stovepipe/request-issues
+  - name: e2e-stovepipe/project-issues
+  - name: e2e-stovepipe/project-analysis
+  - name: e2e-stovepipe/project-analysis-dlq

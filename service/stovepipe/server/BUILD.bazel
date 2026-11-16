@@ -44,7 +44,8 @@ go_library(
         "//stovepipe/extension/fixer/noop:go_default_library",
         "//stovepipe/extension/projectissues/noop:go_default_library",
         "//stovepipe/extension/projectstatus/noop:go_default_library",
-        "//stovepipe/extension/queueconfig/default:go_default_library",
+        "//stovepipe/extension/queueconfig:go_default_library",
+        "//stovepipe/extension/queueconfig/yaml:go_default_library",
         "//stovepipe/extension/sourcecontrol:go_default_library",
         "//stovepipe/extension/sourcecontrol/fake:go_default_library",
         "//stovepipe/extension/storage:go_default_library",
@@ -80,6 +81,7 @@ filegroup(
     testonly = True,
     srcs = [
         "Dockerfile",
+        "queues.yaml",
         ":stovepipe_linux",
     ],
     visibility = ["//test:__subpackages__"],
@@ -88,6 +90,7 @@ filegroup(
 go_test(
     name = "go_default_test",
     srcs = ["main_test.go"],
+    data = ["queues.yaml"],
     embed = [":go_default_library"],
     deps = [
         "//api/base/hook:go_default_library",
@@ -101,6 +104,8 @@ go_test(
         "//stovepipe/core/requestlog:go_default_library",
         "//stovepipe/entity:go_default_library",
         "//stovepipe/extension/buildissue/noop:go_default_library",
+        "//stovepipe/extension/queueconfig:go_default_library",
+        "//stovepipe/extension/queueconfig/yaml:go_default_library",
         "//stovepipe/extension/storage:go_default_library",
         "//stovepipe/extension/storage/mock:go_default_library",
         "@com_github_stretchr_testify//assert:go_default_library",

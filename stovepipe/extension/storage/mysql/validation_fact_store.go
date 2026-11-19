@@ -19,12 +19,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/uber-go/tally"
 	"github.com/uber/submitqueue/platform/metrics"
 	"github.com/uber/submitqueue/stovepipe/entity"
 	"github.com/uber/submitqueue/stovepipe/extension/storage"
 )
+
+const validationFactBatchSize = 200
 
 type validationFactStore struct {
 	db    *sql.DB
@@ -65,6 +68,70 @@ func (v *validationFactStore) Create(ctx context.Context, fact entity.Validation
 	}
 
 	return nil
+}
+
+func (v *validationFactStore) CreateBatch(ctx context.Context, facts []entity.ValidationFact) (ret []entity.ValidationFact, retErr error) {
+	op := metrics.Begin(v.scope, "create_batch", metrics.StorageLatencyBuckets)
+	defer func() { op.Complete(retErr) }()
+
+	for start := 0; start < len(facts); start += validationFactBatchSize {
+		end := min(start+validationFactBatchSize, len(facts))
+		stored, err := v.createFactBatch(ctx, facts[start:end])
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, stored...)
+	}
+	return ret, nil
+}
+
+func (v *validationFactStore) createFactBatch(ctx context.Context, facts []entity.ValidationFact) ([]entity.ValidationFact, error) {
+	values := make([]string, 0, len(facts))
+	args := make([]any, 0, len(facts)*7)
+	for _, fact := range facts {
+		values = append(values, "(?, ?, ?, ?, ?, ?, ?)")
+		args = append(args, v.queue, fact.URI, fact.Project, fact.ProjectType, fact.Degree, fact.RequestID, fact.CreatedAt)
+	}
+	_, err := v.db.ExecContext(ctx,
+		`INSERT INTO validation_fact (queue, uri, project, project_type, degree, request_id, created_at) VALUES `+
+			strings.Join(values, ", ")+` ON DUPLICATE KEY UPDATE created_at = validation_fact.created_at`, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert validation fact batch queue=%s: %w", v.queue, err)
+	}
+
+	// Read winners by input position so database collation and repeated identities
+	// cannot misassociate retained facts with their callers.
+	queries := make([]string, 0, len(facts))
+	args = make([]any, 0, len(facts)*4)
+	for i, fact := range facts {
+		queries = append(queries, `SELECT ? AS position, uri, project, project_type, degree, request_id, created_at
+			FROM validation_fact WHERE queue = ? AND uri = ? AND project = ?`)
+		args = append(args, i, v.queue, fact.URI, fact.Project)
+	}
+	rows, err := v.db.QueryContext(ctx, strings.Join(queries, " UNION ALL "), args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read validation fact batch queue=%s: %w", v.queue, err)
+	}
+	defer rows.Close()
+
+	stored := make([]entity.ValidationFact, len(facts))
+	count := 0
+	for rows.Next() {
+		var position int
+		var fact entity.ValidationFact
+		if err := rows.Scan(&position, &fact.URI, &fact.Project, &fact.ProjectType, &fact.Degree, &fact.RequestID, &fact.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan validation fact batch: %w", err)
+		}
+		stored[position] = fact
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to read validation fact batch: %w", err)
+	}
+	if count != len(facts) {
+		return nil, fmt.Errorf("validation fact batch queue=%s returned %d of %d facts", v.queue, count, len(facts))
+	}
+	return stored, nil
 }
 
 // Get returns the bound queue's fact for uri and project. Returns ErrNotFound if absent.

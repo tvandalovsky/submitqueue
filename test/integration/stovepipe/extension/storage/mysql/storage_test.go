@@ -58,6 +58,16 @@ func TestMySQLStorage(t *testing.T) {
 	require.NoError(t, err, "failed to create storage")
 	factory := mysqlFactory{backend: backend}
 
+	t.Run("ValidationFactBatchRetry", func(t *testing.T) {
+		resetStorage(t, db)
+		testValidationFactBatchRetry(t, ctx, backend)
+	})
+
+	t.Run("ValidationFactBatchCollation", func(t *testing.T) {
+		resetStorage(t, db)
+		testValidationFactBatchCollation(t, ctx, backend)
+	})
+
 	t.Run("QueueStateTransitions", func(t *testing.T) {
 		resetStorage(t, db)
 		testQueueStateTransitions(t, ctx, db, backend)

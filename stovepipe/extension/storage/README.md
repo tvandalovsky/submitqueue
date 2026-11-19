@@ -16,6 +16,12 @@ A `Get` immediately following a successful write (`Create`/`Update`) — by the 
 
 **Controllers must not treat `ErrNotFound` as "not visible yet, retry."** The store interface is intentionally general enough to run over any backend, so a controller has no way to know whether a missing row will appear shortly or does not exist at all — retrying on that assumption just reintroduces, in business logic, the consistency gap the storage contract exists to close. If a `Get` misses a row that a causally-prior write should already have produced (e.g. `build` loading the `Request` that `process` published its message for, or `process` loading the `Queue` row `ingest` get-or-created before publishing), that is a storage implementation defect: let the error surface as a normal (non-retryable, per [`platform/errs`](../../../platform/errs/README.md)'s default) failure rather than absorbing it with a retryable wrapper. See [build.md](../../../doc/rfc/stovepipe/steps/build.md#error-classification) and [process.md](../../../doc/rfc/stovepipe/steps/process.md) for the pipeline stages this applies to.
 
+## Validation fact batches
+
+Validation facts remain first-writer-wins. Batch creation returns the retained fact for each input in input order, including duplicates and facts owned by other requests; ownership validation belongs to the caller. Returning retained values, rather than an affected-row count, preserves the original degree and request identity on retries. The result does not distinguish a new insert from an identical existing fact. The single-fact create contract is unchanged.
+
+Batches need not be atomic. An error can follow durable writes, so callers retry the same identities and adopt the retained results. The MySQL implementation uses at most 200 inputs per insert and reads their winning values in one subsequent statement; an error while reading does not undo the insert. Duplicate identities leave every stored field unchanged, while other SQL errors remain errors. This storage capability does not change the running project-analysis writer.
+
 ## Key-value contract
 
 Same design space as [`submitqueue/extension/storage`](../../../submitqueue/extension/storage/README.md#key-value-contract): every method must be satisfiable by a plain key-value backend as cheaply as by MySQL — get/put/conditional-update by primary key only, no query-by-attribute or server-side filtering. `RequestURIStore` is the reverse-lookup example here (which request owns a given commit URI), kept as its own store rather than a secondary index on `RequestStore`.

@@ -571,7 +571,7 @@ func testValidationFactBatchRetry(t *testing.T, ctx context.Context, backend *my
 		facts[i] = entity.ValidationFact{URI: "commit", Project: fmt.Sprintf("project-%03d", i), RequestID: "1", CreatedAt: 10}
 	}
 	facts[200].Project = strings.Repeat("x", 256)
-	_, err = store.CreateBatch(ctx, facts)
+	err = store.CreateBatch(ctx, facts)
 	require.Error(t, err)
 	retained, err := store.Get(ctx, facts[0].URI, facts[0].Project)
 	require.NoError(t, err)
@@ -581,8 +581,10 @@ func testValidationFactBatchRetry(t *testing.T, ctx context.Context, backend *my
 	for i := range facts {
 		facts[i].CreatedAt = 20
 	}
-	got, err := store.CreateBatch(ctx, facts)
+	require.NoError(t, store.CreateBatch(ctx, facts))
+	got, err := store.ListProjects(ctx, facts[0].URI, "", len(facts)+1)
 	require.NoError(t, err)
+	require.Len(t, got, len(facts))
 	for i, fact := range got {
 		expected := facts[i]
 		if i < 200 {
@@ -602,7 +604,10 @@ func testValidationFactBatchCollation(t *testing.T, ctx context.Context, backend
 	alias.Project = "project"
 	alias.Degree = 0
 	alias.RequestID = "2"
-	got, err := store.CreateBatch(ctx, []entity.ValidationFact{alias, first})
-	require.NoError(t, err)
-	assert.Equal(t, []entity.ValidationFact{first, first}, got)
+	require.NoError(t, store.CreateBatch(ctx, []entity.ValidationFact{alias, first}))
+	for _, input := range []entity.ValidationFact{alias, first} {
+		retained, err := store.Get(ctx, input.URI, input.Project)
+		require.NoError(t, err)
+		assert.Equal(t, first, retained)
+	}
 }

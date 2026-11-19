@@ -730,9 +730,7 @@ func (s *ValidationFactStoreContractSuite) TestValidationFactStore_CreateBatch()
 			}
 			inputCopy := append([]entity.ValidationFact(nil), tt.input...)
 			for range 2 {
-				got, err := store.CreateBatch(s.ctx, tt.input)
-				require.NoError(t, err)
-				assert.Equal(t, tt.want, got)
+				require.NoError(t, store.CreateBatch(s.ctx, tt.input))
 				assert.Equal(t, inputCopy, tt.input)
 				for _, expected := range tt.want {
 					stored, err := store.Get(s.ctx, expected.URI, expected.Project)
@@ -761,9 +759,7 @@ func (s *ValidationFactStoreContractSuite) TestValidationFactStore_CreateBatchLa
 
 	store := s.storeFor("contract/fact-batch/large")
 	for range 2 {
-		got, err := store.CreateBatch(s.ctx, facts)
-		require.NoError(t, err)
-		assert.Equal(t, facts, got)
+		require.NoError(t, store.CreateBatch(s.ctx, facts))
 	}
 	got, err := store.ListProjects(s.ctx, facts[0].URI, "", len(facts)+1)
 	require.NoError(t, err)
@@ -785,30 +781,22 @@ func (s *ValidationFactStoreContractSuite) TestValidationFactStore_CreateBatchCo
 		second[i].RequestID = "2"
 		second[i].Degree = 0.5
 	}
-	type result struct {
-		facts []entity.ValidationFact
-		err   error
-	}
 	start := make(chan struct{})
-	results := make(chan result, 1)
+	results := make(chan error, 1)
 	for _, input := range [][]entity.ValidationFact{first, second} {
 		go func() {
 			<-start
-			facts, err := store.CreateBatch(s.ctx, input)
-			results <- result{facts: facts, err: err}
+			results <- store.CreateBatch(s.ctx, input)
 		}()
 	}
 	close(start)
 	for range 2 {
-		got := <-results
-		require.NoError(t, got.err)
-		require.Len(t, got.facts, len(first))
-		for i, fact := range got.facts {
-			retained, err := store.Get(s.ctx, first[i].URI, first[i].Project)
-			require.NoError(t, err)
-			assert.Equal(t, retained, fact)
-			assert.Contains(t, []entity.ValidationFact{first[i], second[i]}, fact)
-		}
+		require.NoError(t, <-results)
+	}
+	for i, fact := range first {
+		retained, err := store.Get(s.ctx, fact.URI, fact.Project)
+		require.NoError(t, err)
+		assert.Contains(t, []entity.ValidationFact{first[i], second[i]}, retained)
 	}
 }
 

@@ -32,12 +32,11 @@ type ValidationFactStore interface {
 	// untouched — first writer wins.
 	Create(ctx context.Context, fact entity.ValidationFact) error
 
-	// CreateBatch retains missing facts and returns the stored facts in input order.
-	// Existing identities, including repeated inputs, keep their first stored value.
-	// Callers must check the returned request IDs before adopting existing facts.
-	// Empty input is a no-op. On error, some writes may be durable; retrying is safe.
-	// Atomicity across facts is not guaranteed.
-	CreateBatch(ctx context.Context, facts []entity.ValidationFact) ([]entity.ValidationFact, error)
+	// CreateBatch writes missing facts without replacing existing identities.
+	// Duplicates and empty input are no-ops. It does not read stored values or
+	// report which facts were inserted. On error, some writes may be durable;
+	// retrying is safe. Atomicity across facts is not guaranteed.
+	CreateBatch(ctx context.Context, facts []entity.ValidationFact) error
 
 	// Get returns the bound queue's fact for uri and project. Returns ErrNotFound if no
 	// fact exists, which means the scope was never validated rather than validated green.

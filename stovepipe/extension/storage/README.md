@@ -18,9 +18,9 @@ A `Get` immediately following a successful write (`Create`/`Update`) — by the 
 
 ## Validation fact batches
 
-Validation facts remain first-writer-wins. Batch creation returns the retained fact for each input in input order, including duplicates and facts owned by other requests; ownership validation belongs to the caller. Returning retained values, rather than an affected-row count, preserves the original degree and request identity on retries. The result does not distinguish a new insert from an identical existing fact. The single-fact create contract is unchanged.
+Validation facts remain first-writer-wins. Batch creation is write-only: duplicate identities are no-ops, and success does not distinguish new inserts from existing facts or guarantee that the stored payload matches the input. Callers that need the retained degree or request ownership read explicitly using `Get` or `ListProjects`. The single-fact create contract is unchanged.
 
-Batches need not be atomic. An error can follow durable writes, so callers retry the same identities and adopt the retained results. The MySQL implementation uses at most 200 inputs per insert and reads their winning values in one subsequent statement; an error while reading does not undo the insert. Duplicate identities leave every stored field unchanged, while other SQL errors remain errors. This storage capability does not change the running project-analysis writer.
+Batches need not be atomic. An error can follow durable writes, so callers can retry the same identities safely. The MySQL implementation uses at most 200 inputs per insert with no read-back query. Duplicate identities leave every stored field unchanged, while other SQL errors remain errors. This storage capability does not change the running project-analysis writer.
 
 ## Key-value contract
 

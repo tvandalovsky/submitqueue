@@ -56,12 +56,11 @@ func (mr *MockValidationFactStoreMockRecorder) Create(ctx, fact any) *gomock.Cal
 }
 
 // CreateBatch mocks base method.
-func (m *MockValidationFactStore) CreateBatch(ctx context.Context, facts []entity.ValidationFact) ([]entity.ValidationFact, error) {
+func (m *MockValidationFactStore) CreateBatch(ctx context.Context, facts []entity.ValidationFact) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateBatch", ctx, facts)
-	ret0, _ := ret[0].([]entity.ValidationFact)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // CreateBatch indicates an expected call of CreateBatch.

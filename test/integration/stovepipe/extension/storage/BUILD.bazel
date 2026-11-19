@@ -2,10 +2,7 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "suite.go",
-        "validation_fact_batch.go",
-    ],
+    srcs = ["suite.go"],
     importpath = "github.com/uber/submitqueue/test/integration/stovepipe/extension/storage",
     visibility = ["//visibility:public"],
     deps = [

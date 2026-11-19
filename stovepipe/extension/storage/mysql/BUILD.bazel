@@ -64,7 +64,6 @@ go_test(
         "request_summary_store_test.go",
         "request_uri_store_test.go",
         "storage_test.go",
-        "validation_fact_batch_test.go",
         "validation_fact_store_test.go",
     ],
     embed = [":go_default_library"],

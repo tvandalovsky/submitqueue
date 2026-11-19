@@ -76,25 +76,19 @@ func (v *validationFactStore) CreateBatch(ctx context.Context, facts []entity.Va
 
 	for start := 0; start < len(facts); start += validationFactBatchSize {
 		end := min(start+validationFactBatchSize, len(facts))
-		if err := v.createFactBatch(ctx, facts[start:end]); err != nil {
-			return err
+		batch := facts[start:end]
+		values := make([]string, 0, len(batch))
+		args := make([]any, 0, len(batch)*7)
+		for _, fact := range batch {
+			values = append(values, "(?, ?, ?, ?, ?, ?, ?)")
+			args = append(args, v.queue, fact.URI, fact.Project, fact.ProjectType, fact.Degree, fact.RequestID, fact.CreatedAt)
 		}
-	}
-	return nil
-}
-
-func (v *validationFactStore) createFactBatch(ctx context.Context, facts []entity.ValidationFact) error {
-	values := make([]string, 0, len(facts))
-	args := make([]any, 0, len(facts)*7)
-	for _, fact := range facts {
-		values = append(values, "(?, ?, ?, ?, ?, ?, ?)")
-		args = append(args, v.queue, fact.URI, fact.Project, fact.ProjectType, fact.Degree, fact.RequestID, fact.CreatedAt)
-	}
-	_, err := v.db.ExecContext(ctx,
-		`INSERT INTO validation_fact (queue, uri, project, project_type, degree, request_id, created_at) VALUES `+
-			strings.Join(values, ", ")+` ON DUPLICATE KEY UPDATE created_at = validation_fact.created_at`, args...)
-	if err != nil {
-		return fmt.Errorf("failed to insert validation fact batch queue=%s: %w", v.queue, err)
+		_, err := v.db.ExecContext(ctx,
+			`INSERT INTO validation_fact (queue, uri, project, project_type, degree, request_id, created_at) VALUES `+
+				strings.Join(values, ", ")+` ON DUPLICATE KEY UPDATE created_at = validation_fact.created_at`, args...)
+		if err != nil {
+			return fmt.Errorf("failed to insert validation fact batch queue=%s: %w", v.queue, err)
+		}
 	}
 	return nil
 }
